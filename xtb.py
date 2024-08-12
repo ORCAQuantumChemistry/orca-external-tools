@@ -15,23 +15,51 @@ from typing import Iterable
 
 # path to the xtb executable. If None, will look for all XTB_NAMES in the system PATH
 XTB_EXE: str | Path | None = None
-XTB_NAMES: list[str] = ['xtb', 'otool_xtb']
+XTB_NAMES: list[str] = ["xtb", "otool_xtb"]
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Common functions: these are duplicated in all scripts to make them self-contained
 
+
 def strip_comments(s: str) -> str:
     """Strip comment starting with '#' and continuing until the end of the string. Also strip whitespace."""
-    return s.split('#')[0].strip()
+    return s.split("#")[0].strip()
 
 
-def read_input(inpfile: str | Path) -> tuple[str, int, int, int, bool]:
-    """ Read the ORCA-generated input file
+def enforce_path_object(fname: str | Path) -> Path:
+    """Enforce that the input is a Path object
 
     Parameters
     ----------
-    inpfile
+    fname : str | Path
+        The filename which should be a string or a Path object
+
+    Returns
+    -------
+    Path
+        The filename as a Path object
+
+    Raises
+    ------
+    TypeError
+        If the input is not a string or a Path object (e.g. a list)
+    """
+    if isinstance(fname, str):
+        return Path(fname)
+    elif isinstance(fname, Path):
+        return fname
+    else:
+        msg = "Input must be a string or a Path object."
+        raise TypeError(msg)
+
+
+def read_input(inpfile: str | Path) -> tuple[str, int, int, int, bool]:
+    """Read the ORCA-generated input file
+
+    Parameters
+    ----------
+    inpfile : str | Path
         The input file
 
     Returns

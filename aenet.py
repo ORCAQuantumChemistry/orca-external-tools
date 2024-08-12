@@ -14,31 +14,61 @@ from typing import Iterable, Mapping
 
 # Set the default parameters here (can be overridden from the command line)
 # predict.x executable from aenet
-PREDICT_EXE: str | Path | None = "predict.x"  # Path('/path/to/aenet/bin/predict.x-2.0.4-gfortran_serial')
+PREDICT_EXE: str | Path | None = (
+    "predict.x"  # Path('/path/to/aenet/bin/predict.x-2.0.4-gfortran_serial')
+)
 # directory, containing the NN files
 NNPATH: str | Path | None = None  # Path('/path/to/nns')
 # extension for the NN files (<Symbol>.<NNEXT>)
 NNEXT: str | None = None  # '20tanh-20tanh.nn_TM'
 
 # Energy and length conversion to atomic units.
-ENERGY_CONVERSION = {'eV': 27.21138625}
-LENGTH_CONVERSION = {'Ang': 0.529177210903}
+ENERGY_CONVERSION = {"eV": 27.21138625}
+LENGTH_CONVERSION = {"Ang": 0.529177210903}
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Common functions: these are duplicated in all scripts to make them self-contained
 
+
 def strip_comments(s: str) -> str:
     """Strip comment starting with '#' and continuing until the end of the string. Also strip whitespace."""
-    return s.split('#')[0].strip()
+    return s.split("#")[0].strip()
 
 
-def read_input(inpfile: str | Path) -> tuple[str, int, int, int, bool]:
-    """ Read the ORCA-generated input file
+def enforce_path_object(fname: str | Path) -> Path:
+    """Enforce that the input is a Path object
 
     Parameters
     ----------
-    inpfile
+    fname : str | Path
+        The filename which should be a string or a Path object
+
+    Returns
+    -------
+    Path
+        The filename as a Path object
+
+    Raises
+    ------
+    TypeError
+        If the input is not a string or a Path object (e.g. a list)
+    """
+    if isinstance(fname, str):
+        return Path(fname)
+    elif isinstance(fname, Path):
+        return fname
+    else:
+        msg = "Input must be a string or a Path object."
+        raise TypeError(msg)
+
+
+def read_input(inpfile: str | Path) -> tuple[str, int, int, int, bool]:
+    """Read the ORCA-generated input file
+
+    Parameters
+    ----------
+    inpfile : str | Path
         The input file
 
     Returns
