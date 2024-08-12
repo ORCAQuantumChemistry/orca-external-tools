@@ -3,6 +3,7 @@
 This is a simple wrapper for the xtb binary (github.com/grimme-lab/xtb), compatible with ORCA's ExtTool interface.
 It is mostly used for testing purposes, since ORCA has a native interface to xtb.
 """
+
 from __future__ import annotations
 
 import shutil
@@ -76,7 +77,8 @@ def read_input(inpfile: str | Path) -> tuple[str, int, int, int, bool]:
         dograd: bool
             Whether to compute the gradient
     """
-    with open(inpfile) as f:
+    inpfile = enforce_path_object(inpfile)
+    with inpfile.open() as f:
         xyzname = strip_comments(f.readline())
         charge = int(strip_comments(f.readline()))
         mult = int(strip_comments(f.readline()))
@@ -86,56 +88,71 @@ def read_input(inpfile: str | Path) -> tuple[str, int, int, int, bool]:
     return xyzname, charge, mult, ncores, dograd
 
 
-def write_engrad(outfile: str | Path, natoms: int, energy: float,
-                 dograd: bool, gradient: Iterable[float] = None) -> None:
-    """ Write the energy/gradient file to feed back to ORCA.
+def write_engrad(
+    outfile: str | Path,
+    natoms: int,
+    energy: float,
+    dograd: bool,
+    gradient: Iterable[float] = None,
+) -> None:
+    """Write the energy/gradient file to feed back to ORCA.
 
     Parameters
     ----------
-    outfile
+    outfile : str | Path
         The engrad file
-    natoms
+    natoms : int
         Number of atoms
-    energy
+    energy : float
         Total energy
-    dograd
+    dograd : bool
         Whether the gradient is computed
     gradient
         The gradient (X,Y,Z) for each atom
     """
-    with open(outfile, 'w') as f:
-        output = '#\n'
-        output += '# Number of atoms\n'
-        output += '#\n'
-        output += f'{natoms}\n'
-        output += '#\n'
-        output += '# Total energy [Eh]\n'
-        output += '#\n'
-        output += f'{energy:.12e}\n'
+    outfile = enforce_path_object(outfile)
+    with outfile.open("w") as f:
+        output = "#\n"
+        output += "# Number of atoms\n"
+        output += "#\n"
+        output += f"{natoms}\n"
+        output += "#\n"
+        output += "# Total energy [Eh]\n"
+        output += "#\n"
+        output += f"{energy:.12e}\n"
         if dograd:
-            output += '#\n'
-            output += '# Gradient [Eh/Bohr] A1X, A1Y, A1Z, A2X, ...\n'
-            output += '#\n'
-            output += '\n'.join(f'{g: .12e}' for g in gradient) + '\n'
+            output += "#\n"
+            output += "# Gradient [Eh/Bohr] A1X, A1Y, A1Z, A2X, ...\n"
+            output += "#\n"
+            output += "\n".join(f"{g: .12e}" for g in gradient) + "\n"
         f.write(output)
 
 
-def run_command(command: str | Path, outname: str | Path, *args: str) -> None:
+def run_command(
+    command: str | Path, outname: str | Path, *args: tuple[str, ...]
+) -> None:
     """
     Run the given command and redirect its STDOUT and STDERR to a file. Exists on a non-zero return code.
 
     Parameters
     ----------
-    command
+    command : str | Path
         The command to run or path to an executable
-    outname
+    outname : str | Path
         The output file to be written to (overwritten!)
-    args
+    *args : tuple[str, ...]
         arguments to be passed to the command
     """
-    with open(outname, 'w') as of:
+    command = enforce_path_object(command)
+    outname = enforce_path_object(outname)
+    with open(outname, "w") as of:
         try:
-            subprocess.run([str(command)] + list(args), stdout=of, stderr=subprocess.STDOUT, check=True)
+            subprocess.run(
+                [str(command)] + list(args),
+                stdout=of,
+                stderr=subprocess.STDOUT,
+                check=True,
+            )
         except subprocess.CalledProcessError as err:
             print(err)
             exit(err.returncode)
@@ -147,60 +164,73 @@ def clean_output(outfile: str | Path, namespace: str) -> None:
 
     Parameters
     ----------
-    outfile
+    outfile : str | Path
         The output file to print
-    namespace
+    namespace : str
         The starting string of all files to remove.
     """
     # print the output to STDOUT
+    outfile = enforce_path_object(outfile)
     with open(outfile) as f:
         for line in f:  # line by line to avoid memory overflow
-            print(line, end='')
+            print(line, end="")
     # remove all file from the namespace
-    for f in Path('.').glob(namespace + '*'):
+    for f in Path(".").glob(f"{namespace}*"):
         f.unlink()
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
-def run_xtb(xtbexe: str | Path, xyzname: str, namespace: str,
-            charge: int, mult: int, ncores: int, dograd: bool,
-            outfile: str | Path, *args: str) -> None:
+
+def run_xtb(
+    xtbexe: str | Path,
+    xyzname: str,
+    namespace: str,
+    charge: int,
+    mult: int,
+    ncores: int,
+    dograd: bool,
+    outfile: str | Path,
+    *args: tuple[str, ...],
+) -> None:
     """
     Run the XTB program and redirect its STDOUT and STDERR to a file.
 
     Parameters
     ----------
-    xtbexe
+    xtbexe : str | Path
         path to the xtb binary
-    xyzname
+    xyzname : str
         name of the XYZ file
-    namespace
+    namespace : str
         filename prefix for the xtb output files
-    charge
+    charge : int
         total charge of the system
-    mult
+    mult : int
         spin multiplicity of the system
-    ncores
+    ncores : int
         number of threads to use
-    dograd
+    dograd : bool
         whether to compute the gradient
-    outfile
+    outfile : str | Path
         the output file
-    args
+    *args : tuple[str, ...]
         additional arguments to pass to xtb
     """
     args = list(args)
-    args += [str(i) for i in [xyzname, '-c', charge, '-P', ncores, '--namespace', namespace]]
-    nue = mult - 1
-    if nue:
-        args += ['-u', str(nue)]
+    args += [
+        str(i) for i in [xyzname, "-c", charge, "-P", ncores, "--namespace", namespace]
+    ]
+    if nue := mult - 1:
+        args += ["-u", str(nue)]
     if dograd:
-        args += ['--grad']
+        args += ["--grad"]
     run_command(xtbexe, outfile, *args)
 
 
-def read_xtbout(namespace: str, xtbout: str | Path, natoms: int, dograd: bool) -> tuple[float, list[float]]:
+def read_xtbout(
+    namespace: str, xtbout: str | Path, natoms: int, dograd: bool
+) -> tuple[float, list[float]]:
     """
     Read the output from XTB
 
@@ -223,21 +253,23 @@ def read_xtbout(namespace: str, xtbout: str | Path, natoms: int, dograd: bool) -
         gradient: list[float]
             The gradient (X,Y,Z) for each atom
     """
-    xtbgrad = namespace + '.gradient'
+    xtbgrad = f"{namespace}.gradient"
     energy = None
-    natoms_read = 0
     gradient = []
     # read the energy from the output file
-    with open(xtbout) as f:
+    xtbout = enforce_path_object(xtbout)
+    xtbgrad = enforce_path_object(xtbgrad)
+    with xtbout.open() as f:
         for line in f:
-            if 'TOTAL ENERGY' in line:
+            if "TOTAL ENERGY" in line:
                 energy = float(line.split()[3])
                 break
     # read the gradient from the .gradient file
     if dograd:
-        with open(xtbgrad) as f:
+        natoms_read = 0
+        with xtbgrad.open() as f:
             for line in f:
-                if '$grad' in line:
+                if "$grad" in line:
                     break
             for line in f:
                 fields = line.split()
