@@ -308,24 +308,51 @@ def read_predict_output(outname: str | Path, natoms: int, dograd: bool) -> tuple
 
 
 def main(argv: list[str]):
+    """Main function to run the script"""
     # parse the CLI arguments
-    parser = ArgumentParser(prog=argv[0],
-                            description="Wrapper for aenet's predict.x, compatible with ORCA's "
-                                        "otool_external. Reads the ORCA-generated input <inputfile>, "
-                                        "converts the BaseName.xyz file to XSF, writes an input for predict.x, "
-                                        "runs the latter, parses its output and writes the BaseName.engrad "
-                                        "file for ORCA.")
-    parser.add_argument('inputfile')
-    parser.add_argument('-n', "--nnpath", metavar='DIR', dest='nnpath', required=(not NNPATH),
-                        help="directory containing the NN files <Symbol>.<EXT>" +
-                             (f' (default: "{NNPATH}")' if NNPATH else ''), default=NNPATH)
-    parser.add_argument('-e', "--nnext", metavar='EXT', dest='nnext', required=False, default=NNEXT,
-                        help="extension of the NN files. " +
-                             (f'(default: {NNEXT})' if NNEXT else
-                              "If not provided, there must be a single file that matches the glob <Symbol>.*"))
-    parser.add_argument('-x', "--exe", metavar='EXE', dest='exe', required=(not PREDICT_EXE),
-                        help="path to the aenet predict.x executable" +
-                             (f' (default: "{PREDICT_EXE}")' if PREDICT_EXE else ''), default=PREDICT_EXE)
+    parser = ArgumentParser(
+        prog=argv[0],
+        description="Wrapper for aenet's predict.x, compatible with ORCA's "
+        "otool_external. Reads the ORCA-generated input <inputfile>, "
+        "converts the BaseName.xyz file to XSF, writes an input for predict.x, "
+        "runs the latter, parses its output and writes the BaseName.engrad "
+        "file for ORCA.",
+    )
+    parser.add_argument("inputfile")
+    parser.add_argument(
+        "-n",
+        "--nnpath",
+        metavar="DIR",
+        dest="nnpath",
+        required=(not NNPATH),
+        help="directory containing the NN files <Symbol>.<EXT>"
+        + (f' (default: "{NNPATH}")' if NNPATH else ""),
+        default=NNPATH,
+    )
+    parser.add_argument(
+        "-e",
+        "--nnext",
+        metavar="EXT",
+        dest="nnext",
+        required=False,
+        default=NNEXT,
+        help="extension of the NN files. "
+        + (
+            f"(default: {NNEXT})"
+            if NNEXT
+            else "If not provided, there must be a single file that matches the glob <Symbol>.*"
+        ),
+    )
+    parser.add_argument(
+        "-x",
+        "--exe",
+        metavar="EXE",
+        dest="exe",
+        required=(not PREDICT_EXE),
+        help="path to the aenet predict.x executable"
+        + (f' (default: "{PREDICT_EXE}")' if PREDICT_EXE else ""),
+        default=PREDICT_EXE,
+    )
     args = parser.parse_args(argv[1:])
 
     # sanitize paths
