@@ -3,6 +3,7 @@
 This is a wrapper for the predict.x binary from aenet (http://ann.atomistic.net),
 compatible with ORCA's ExtTool interface.
 """
+
 from __future__ import annotations
 
 import sys
@@ -85,7 +86,8 @@ def read_input(inpfile: str | Path) -> tuple[str, int, int, int, bool]:
         dograd: bool
             Whether to compute the gradient
     """
-    with open(inpfile) as f:
+    inpfile = enforce_path_object(inpfile)
+    with inpfile.open() as f:
         xyzname = strip_comments(f.readline())
         charge = int(strip_comments(f.readline()))
         mult = int(strip_comments(f.readline()))
@@ -95,56 +97,66 @@ def read_input(inpfile: str | Path) -> tuple[str, int, int, int, bool]:
     return xyzname, charge, mult, ncores, dograd
 
 
-def write_engrad(outfile: str | Path, natoms: int, energy: float,
-                 dograd: bool, gradient: Iterable[float] = None) -> None:
-    """ Write the energy/gradient file to feed back to ORCA.
+def write_engrad(
+    outfile: str | Path,
+    natoms: int,
+    energy: float,
+    dograd: bool,
+    gradient: Iterable[float] = None,
+) -> None:
+    """Write the energy/gradient file to feed back to ORCA.
 
     Parameters
     ----------
-    outfile
+    outfile : str | Path
         The engrad file
-    natoms
+    natoms : int
         Number of atoms
-    energy
+    energy : float
         Total energy
-    dograd
+    dograd : bool
         Whether the gradient is computed
-    gradient
+    gradient : Iterable[float], optional
         The gradient (X,Y,Z) for each atom
     """
-    with open(outfile, 'w') as f:
-        output = '#\n'
-        output += '# Number of atoms\n'
-        output += '#\n'
-        output += f'{natoms}\n'
-        output += '#\n'
-        output += '# Total energy [Eh]\n'
-        output += '#\n'
-        output += f'{energy:.12e}\n'
+    outfile = enforce_path_object(outfile)
+    with outfile.open("w") as f:
+        output = "#\n"
+        output += "# Number of atoms\n"
+        output += "#\n"
+        output += f"{natoms}\n"
+        output += "#\n"
+        output += "# Total energy [Eh]\n"
+        output += "#\n"
+        output += f"{energy:.12e}\n"
         if dograd:
-            output += '#\n'
-            output += '# Gradient [Eh/Bohr] A1X, A1Y, A1Z, A2X, ...\n'
-            output += '#\n'
-            output += '\n'.join(f'{g: .12e}' for g in gradient) + '\n'
+            output += "#\n"
+            output += "# Gradient [Eh/Bohr] A1X, A1Y, A1Z, A2X, ...\n"
+            output += "#\n"
+            output += "\n".join(f"{g: .12e}" for g in gradient) + "\n"
         f.write(output)
 
 
-def run_command(command: str | Path, outname: str | Path, *args: str) -> None:
+def run_command(command: str | Path, outname: str | Path, *args: tuple[str, ...]) -> None:
     """
     Run the given command and redirect its STDOUT and STDERR to a file. Exists on a non-zero return code.
 
     Parameters
     ----------
-    command
+    command : str | Path
         The command to run or path to an executable
-    outname
+    outname : str | Path
         The output file to be written to (overwritten!)
-    args
+    args : tuple[str, ...]
         arguments to be passed to the command
     """
-    with open(outname, 'w') as of:
+    command = enforce_path_object(command)
+    outname = enforce_path_object(outname)
+    with outname.open("w") as of:
         try:
-            subprocess.run([command] + list(args), stdout=of, stderr=subprocess.STDOUT, check=True)
+            subprocess.run(
+                [command] + list(args), stdout=of, stderr=subprocess.STDOUT, check=True
+            )
         except subprocess.CalledProcessError as err:
             print(err)
             exit(err.returncode)
@@ -156,30 +168,32 @@ def clean_output(outfile: str | Path, namespace: str) -> None:
 
     Parameters
     ----------
-    outfile
+    outfile : str | Path
         The output file to print
-    namespace
+    namespace : str
         The starting string of all files to remove.
     """
     # print the output to STDOUT
-    with open(outfile) as f:
+    outfile = enforce_path_object(outfile)
+    with outfile.open() as f:
         for line in f:  # line by line to avoid memory overflow
-            print(line, end='')
+            print(line, end="")
     # remove all file from the namespace
-    for f in Path('.').glob(namespace + '*'):
+    for f in Path(".").glob(namespace + "*"):
         f.unlink()
+
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
 def xyz2xsf(xyzname: str | Path, xsfname: str | Path) -> tuple[int, set[str]]:
-    """ Convert a XYZ file to XSF format.
+    """Convert a XYZ file to XSF format.
 
     Parameters
     ----------
-    xyzname
+    xyzname : str | Path
         The XYZ file to convert
-    xsfname
+    xsfname : str | Path
         The output XSF file name
 
     Returns
@@ -191,7 +205,9 @@ def xyz2xsf(xyzname: str | Path, xsfname: str | Path) -> tuple[int, set[str]]:
             The elements present in the XYZ file
     """
     atomtypes = set()
-    with open(xyzname) as xyzf, open(xsfname, 'w') as xsff:
+    xyzname = enforce_path_object(xyzname)
+    xsfname = enforce_path_object(xsfname)
+    with xyzname.open() as xyzf, xsfname.open("w") as xsff:
         natoms = int(xyzf.readline())
         xyzf.readline()  # comment line
 
@@ -206,17 +222,19 @@ def xyz2xsf(xyzname: str | Path, xsfname: str | Path) -> tuple[int, set[str]]:
     return natoms, atomtypes
 
 
-def get_nns(atomtypes: Iterable[str], nnpath: str | Path, nnext: str = None) -> dict[str, Path]:
-    """ Find the neural network potential files for each element in `atomtypes`.
+def get_nns(
+    atomtypes: Iterable[str], nnpath: str | Path, nnext: str = None
+) -> dict[str, Path]:
+    """Find the neural network potential files for each element in `atomtypes`.
     The files must all be in the same directory and be named "<ElementSymbol>.<Extension>" with the same extension.
 
     Parameters
     ----------
-    atomtypes
+    atomtypes : Iterable[str]
         The elements needed
-    nnpath
+    nnpath : str | Path
         Path to the directory containing the neural network potential files
-    nnext
+    nnext : str, optional
         The extension for each NN file. If none is given '*' is used as a wildcard.
         However, then there must be a single file that matches, otherwise an exception is raised
 
@@ -230,74 +248,86 @@ def get_nns(atomtypes: Iterable[str], nnpath: str | Path, nnext: str = None) -> 
     RuntimeError
         If more than one or no NN files are found for a requested element
     """
-    nnpath = Path(nnpath)
+    nnpath = enforce_path_object(nnpath)
     if not nnext:
-        nnext = '*'
+        nnext = "*"
     nns = {}
     for a in atomtypes:
-        matches = list(nnpath.glob(a + '.' + nnext))
+        matches = list(nnpath.glob(f"{a}.{nnext}"))
         if not matches:
-            raise RuntimeError(f'No NN files found for {a} in {nnpath}')
+            raise RuntimeError(f"No NN files found for {a} in {nnpath}")
         if len(matches) > 1:
-            raise RuntimeError(f'Multiple NN files found for {a}: {matches}. Set --nnext to specify the extension')
+            raise RuntimeError(
+                f"Multiple NN files found for {a}: {matches}. Set --nnext to specify the extension"
+            )
         nns[a] = matches[0]
     return nns
 
 
-def write_predict_input(xsfname: str | Path, inpname: str | Path, dograd: bool, nns: Mapping[str, Path]) -> None:
+def write_predict_input(
+    xsfname: str | Path, inpname: str | Path, dograd: bool, nns: Mapping[str, Path]
+) -> None:
     """Write the input file for predict.x
 
     Parameters
     ----------
-    xsfname
+    xsfname : str | Path
         The name of the XSF coordinates file
-    inpname
+    inpname : str | Path
         The file to be written
-    dograd
+    dograd : bool
         Whether to compute forces
-    nns
+    nns : Mapping[str, Path]
         Keys are element symbols and values are paths to the NN potential files
     """
-    with open(inpname, 'w') as f:
+    inpname = enforce_path_object(inpname)
+    xsfname = enforce_path_object(xsfname)
+    with inpname.open("w") as f:
         # write types
-        f.write(f'TYPES\n{len(nns)}\n' + '\n'.join(nns) + '\n\n')
+        f.write(f"TYPES\n{len(nns)}\n" + "\n".join(nns) + "\n\n")
         # write NN paths
-        f.write('NETWORKS\n' + '\n'.join(f'{a}  "{p}"' for a, p in nns.items()) + '\n\n')
+        f.write(
+            "NETWORKS\n" + "\n".join(f'{a}  "{p}"' for a, p in nns.items()) + "\n\n"
+        )
         # forces tag if gradient is requested
         if dograd:
-            f.write('FORCES\n\n')
+            f.write("FORCES\n\n")
         # write XSF file (only one supported)
-        f.write(f'FILES\n1\n{xsfname}\n')
+        f.write(f"FILES\n1\n{xsfname}\n")
 
 
-def run_predict(predictexe: str | Path, inpname: str | Path, outname: str | Path, ncores: int) -> None:
+def run_predict(
+    predictexe: str | Path, inpname: str | Path, outname: str | Path, ncores: int
+) -> None:
     """
     Run the predict.x program and redirect its STDOUT and STDERR to a file. Exists on a non-zero return code.
 
     Parameters
     ----------
-    predictexe
+    predictexe : str | Path
         Path to the predict.x program
-    inpname
+    inpname : str | Path
         Path to the input file
-    outname
+    outname : str | Path
         The output file to be written to (overwritten!)
-    ncores
+    ncores : int
         Number of cores to use # TODO: currently only implemented in serial
     """
     run_command(predictexe, outname, inpname)
 
 
-def read_predict_output(outname: str | Path, natoms: int, dograd: bool) -> tuple[float, list[float]]:
+def read_predict_output(
+    outname: str | Path, natoms: int, dograd: bool
+) -> tuple[float, list[float]]:
     """Read the output from predict.x
 
     Parameters
     ----------
-    outname
+    outname : str | Path
         The name of the output file
-    natoms
+    natoms : int
         The number of atoms in the system
-    dograd
+    dograd : bool
         Whether the gradient was computed
 
     Returns
@@ -312,22 +342,22 @@ def read_predict_output(outname: str | Path, natoms: int, dograd: bool) -> tuple
     gradient = []
     with open(outname) as f:
         for line in f:
-            if 'Total energy' in line:
+            if "Total energy" in line:
                 fields = line.split()
                 unit = fields[-1]
                 if unit not in ENERGY_CONVERSION:
-                    raise ValueError(f'Unknown energy unit: {unit}')
+                    raise ValueError(f"Unknown energy unit: {unit}")
                 energy = float(fields[-2]) / ENERGY_CONVERSION[unit]
-            elif dograd and 'atomic forces' in line:
+            elif dograd and "atomic forces" in line:
                 f.readline()  # empty
                 f.readline()  # x,y,z,Fx,Fy,Fz
-                eunit, lunit = f.readline().split()[-1].strip('()').split('/')
+                eunit, lunit = f.readline().split()[-1].strip("()").split("/")
                 if eunit not in ENERGY_CONVERSION:
-                    raise ValueError(f'Unknown energy unit: {eunit}')
+                    raise ValueError(f"Unknown energy unit: {eunit}")
                 if lunit not in LENGTH_CONVERSION:
-                    raise ValueError(f'Unknown length unit: {lunit}')
+                    raise ValueError(f"Unknown length unit: {lunit}")
                 # unit conversion & factor of -1 to convert from forces to gradient
-                fac = - LENGTH_CONVERSION[lunit] / ENERGY_CONVERSION[eunit]
+                fac = -LENGTH_CONVERSION[lunit] / ENERGY_CONVERSION[eunit]
                 f.readline()  # ---
                 for i, line2 in enumerate(f):
                     if i >= natoms:
@@ -416,5 +446,5 @@ def main(argv: list[str]):
     clean_output(outname, namespace)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main(sys.argv)
