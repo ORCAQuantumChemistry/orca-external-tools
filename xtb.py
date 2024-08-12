@@ -217,32 +217,47 @@ def read_xtbout(namespace: str, xtbout: str | Path, natoms: int, dograd: bool) -
                     natoms_read += 1
                 elif len(fields) == 3:
                     gradient += [float(i) for i in fields]
-                elif '$end' in line:
+                elif "$end" in line:
                     break
             if natoms_read != natoms:
-                print(f'Number of atoms read: {natoms_read} does not match the expected: {natoms}')
+                print(
+                    f"Number of atoms read: {natoms_read} does not match the expected: {natoms}"
+                )
                 exit(1)
             if len(gradient) != 3 * natoms:
-                print(f'Number of gradient entries: {len(gradient)} does not match 3x number of atoms: {natoms}')
+                print(
+                    f"Number of gradient entries: {len(gradient)} does not match 3x number of atoms: {natoms}"
+                )
                 exit(1)
     return energy, gradient
 
 
-def main(argv):
+def main(argv: list[str]) -> None:
+    """Main function to run the script"""
     if not (xtbexe := XTB_EXE):
         for xtb in XTB_NAMES:
             if xtbexe := shutil.which(xtb):
                 break
 
     # parse the CLI arguments
-    parser = ArgumentParser(prog=argv[0], allow_abbrev=False,
-                            description="Wrapper for xtb, compatible with ORCA's otool_external. "
-                                        "Reads the ORCA-generated input <inputfile>, calls xtb, "
-                                        "parses its output and writes the BaseName.engrad file for ORCA.")
-    parser.add_argument('inputfile')
-    parser.add_argument('-x', "--exe", metavar='XTBEXE', dest='xtbexe', required=(not xtbexe),
-                        help="path to the xtb executable" +
-                             (f' (default: "{xtbexe}")' if xtbexe else ''), default=xtbexe)
+    parser = ArgumentParser(
+        prog=argv[0],
+        allow_abbrev=False,
+        description="Wrapper for xtb, compatible with ORCA's otool_external. "
+        "Reads the ORCA-generated input <inputfile>, calls xtb, "
+        "parses its output and writes the BaseName.engrad file for ORCA.",
+    )
+    parser.add_argument("inputfile")
+    parser.add_argument(
+        "-x",
+        "--exe",
+        metavar="XTBEXE",
+        dest="xtbexe",
+        required=(not xtbexe),
+        help="path to the xtb executable"
+        + (f' (default: "{xtbexe}")' if xtbexe else ""),
+        default=xtbexe,
+    )
     args, xtb_args = parser.parse_known_args(argv[1:])
 
     # sanitize the path to xtb
@@ -254,11 +269,13 @@ def main(argv):
     # set filenames
     basename = xyzname.rstrip(".xyz")
     orca_engrad = basename + ".engrad"
-    xtb_namespace = basename + '.xtb'
+    xtb_namespace = basename + ".xtb"
     xtbout = xtb_namespace + ".out"
 
     # run xtb
-    run_xtb(xtbexe, xyzname, xtb_namespace, charge, mult, ncores, dograd, xtbout, *xtb_args)
+    run_xtb(
+        xtbexe, xyzname, xtb_namespace, charge, mult, ncores, dograd, xtbout, *xtb_args
+    )
 
     # get the number of atoms from the xyz file
     with open(xyzname) as f:
@@ -274,7 +291,5 @@ def main(argv):
     clean_output(xtbout, xtb_namespace)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main(sys.argv)
-
-
