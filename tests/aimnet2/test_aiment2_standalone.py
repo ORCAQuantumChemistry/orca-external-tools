@@ -36,14 +36,12 @@ if resolved_aimnet2_script is None:
 aimnet2_script_path = Path(resolved_aimnet2_script)
 
 
-def cache_model_files(model: str, cache_dir: Path = DEFAULT_MODEL_PATH) -> None:
+def cache_model_files(model: str) -> None:
     """
     Wrapper to check if the required model files are present. If not, they are downloaded.
 
     model: str
         Model for computing the test cases.
-    cache_dir: str, default: DEFAULT_MODEL_PATH
-        The cache directory used to store the model data.
     """
     subprocess.run(
         [
@@ -51,9 +49,8 @@ def cache_model_files(model: str, cache_dir: Path = DEFAULT_MODEL_PATH) -> None:
             "--download-only",
             "--model",
             model,
-            "--model-path",
-            str(cache_dir),
         ],
+        timeout=timeout,
         check=True,
     )
 

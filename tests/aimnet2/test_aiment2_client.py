@@ -5,7 +5,6 @@ import subprocess
 import unittest
 from pathlib import Path
 
-from oet.calculator.aimnet2 import DEFAULT_MODEL_PATH
 from oet.core.test_utilities import (
     OH,
     WATER,
@@ -53,14 +52,12 @@ aimnet_model = "aimnet2"
 timeout = 600
 
 
-def cache_model_files(model: str, cache_dir: Path = DEFAULT_MODEL_PATH) -> None:
+def cache_model_files(model: str) -> None:
     """
     Wrapper to check if the required model files are present. If not, they are downloaded.
 
     model: str
         Model for computing the test cases.
-    cache_dir: str, default: DEFAULT_MODEL_PATH
-        The cache directory used to store the model data.
     """
     subprocess.run(
         [
@@ -68,9 +65,8 @@ def cache_model_files(model: str, cache_dir: Path = DEFAULT_MODEL_PATH) -> None:
             "--download-only",
             "--model",
             model,
-            "--model-path",
-            str(cache_dir),
         ],
+        timeout=timeout,
         check=True,
     )
 
@@ -117,8 +113,6 @@ class Aimnet2Tests(unittest.TestCase):
                     id_port,
                     "--nthreads",
                     "2",
-                    "--model-path",
-                    DEFAULT_MODEL_PATH,
                 ],
                 stdout=f,
                 stderr=subprocess.STDOUT,
@@ -127,7 +121,7 @@ class Aimnet2Tests(unittest.TestCase):
         # Wait for the server to be ready.
         wait_for_server(
             process=cls.server,
-            id_port=id_port,
+            ip_port=id_port,
             timeout=30.0,
         )
 

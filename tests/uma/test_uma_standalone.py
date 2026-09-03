@@ -3,7 +3,6 @@ import subprocess
 import unittest
 from pathlib import Path
 
-from oet.calculator.uma import DEFAULT_CACHE_DIR
 from oet.core.test_utilities import (
     OH,
     WATER,
@@ -30,7 +29,7 @@ uma_model = "uma-s-1p1"
 
 
 def cache_model_files(
-    basemodel: str, param: str = "omol", cache_dir: str = DEFAULT_CACHE_DIR
+    basemodel: str, param: str = "omol"
 ) -> None:
     """
     Wrapper to set up an UMA calculator that downloads the model files into the same cache-directory used for actual oet calculations.
@@ -39,10 +38,6 @@ def cache_model_files(
         Basemodel used to calculate the test cases
     param: str, default: omol
         Parameter set.
-    device str, default: cpu
-        Device used for the calculations.
-    cache_dir: str, default: DEFAULT_CACHE_DIR
-        The cache directory used to store the model data.
     """
     subprocess.run(
         [
@@ -52,8 +47,6 @@ def cache_model_files(
             basemodel,
             "--task",
             param,
-            "--cachedir",
-            cache_dir,
         ],
         check=True,
         timeout=timeout,

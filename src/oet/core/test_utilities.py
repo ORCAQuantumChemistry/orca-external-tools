@@ -234,7 +234,7 @@ def _worker(
 
 def wait_for_server(
     process: subprocess.Popen[str],
-    id_port: str,
+    ip_port: str,
     timeout: float = 60.0,
     poll_interval: float = 0.1,
 ) -> None:
@@ -254,7 +254,7 @@ def wait_for_server(
     """
 
     # Get the server address
-    host, port_str = id_port.rsplit(":", 1)
+    host, port_str = ip_port.rsplit(":", 1)
     port = int(port_str)
 
     # Track the time
