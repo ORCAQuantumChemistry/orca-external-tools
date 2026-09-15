@@ -507,7 +507,7 @@ def install_environment(
 
     # Prepare the command
     command = [
-        installer_python,
+        str(installer_python),
         str(ROOT / "install.py"),
         "--venv-dir",
         str(venv_dir),

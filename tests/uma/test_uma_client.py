@@ -45,14 +45,12 @@ uma_script_path = Path(resolved_uma_script)
 # Default maximum time (in sec) to download the model files if not present
 timeout = 600
 # Default ID and port of server. Change if needed
-id_port = "127.0.0.1:9000"
+ip_port = "127.0.0.1:9000"
 # UMA model to use
 uma_model = "uma-s-1p1"
 
 
-def cache_model_files(
-    basemodel: str, param: str = "omol"
-) -> None:
+def cache_model_files(basemodel: str, param: str = "omol") -> None:
     """
     Wrapper to set up an UMA calculator that downloads the model files into the same cache-directory used for actual oet calculations.
 
@@ -82,7 +80,7 @@ def run_uma(inputfile: str, output_file: str) -> None:
         inputfile=inputfile,
         script_path=uma_client_path,
         outfile=output_file,
-        args=["--bind", id_port, "--model", uma_model],
+        args=["--bind", ip_port, "--model", uma_model],
         timeout=60,
     )
 
@@ -109,7 +107,7 @@ class UmaTests(unittest.TestCase):
         print(f"Starting the server. A detailed server log can be found on file {server_out}")
         with open(server_out, "a") as f:
             cls.server = subprocess.Popen(
-                [uma_server_path, "uma", "--bind", id_port, "--nthreads", "2"],
+                [uma_server_path, "uma", "--bind", ip_port, "--nthreads", "2"],
                 stdout=f,
                 stderr=subprocess.STDOUT,
                 start_new_session=True,
@@ -117,7 +115,7 @@ class UmaTests(unittest.TestCase):
         # Wait for the server to be ready.
         wait_for_server(
             process=cls.server,
-            ip_port=id_port,
+            ip_port=ip_port,
             timeout=30.0,
         )
 

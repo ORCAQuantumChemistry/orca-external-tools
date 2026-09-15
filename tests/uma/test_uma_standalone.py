@@ -28,9 +28,7 @@ timeout = 600
 uma_model = "uma-s-1p1"
 
 
-def cache_model_files(
-    basemodel: str, param: str = "omol"
-) -> None:
+def cache_model_files(basemodel: str, param: str = "omol") -> None:
     """
     Wrapper to set up an UMA calculator that downloads the model files into the same cache-directory used for actual oet calculations.
 

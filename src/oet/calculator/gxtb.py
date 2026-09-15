@@ -15,9 +15,8 @@ main: function
 import os
 import shutil
 import sys
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Namespace
 from pathlib import Path
-from typing import Any
 
 from oet.core.base_calc import BaseCalc, CalculationData
 from oet.core.misc import (
@@ -223,7 +222,7 @@ class GxtbCalc(BaseCalc):
     def calc(
         self,
         calc_data: CalculationData,
-        args_parsed: dict[str, Any],
+        args_parsed: Namespace,
         args_not_parsed: list[str],
     ) -> tuple[float, list[float]]:
         """
@@ -234,7 +233,7 @@ class GxtbCalc(BaseCalc):
         ----------
         calc_data: CalculationData
             Parameters of the calculation
-        args_parsed: dict[str, Any]
+        args_parsed: Namespace
             Arguments parsed as defined in extend_parser
         args_not_parsed: list[str]
             Arguments not parser so far
@@ -247,10 +246,10 @@ class GxtbCalc(BaseCalc):
             Flattened gradient vector (Eh/Bohr), if computed, otherwise empty.
         """
         # Get the arguments parsed as defined in extend_parser
-        prog = args_parsed.get("prog")
-        gxtb_parameterfile = args_parsed.get("gxtb_parameterfile")
-        eeq_parameterfile = args_parsed.get("eeq_parameterfile")
-        basis_parameterfile = args_parsed.get("basis_parameterfile")
+        prog = args_parsed.prog
+        gxtb_parameterfile = args_parsed.gxtb_parameterfile
+        eeq_parameterfile = args_parsed.eeq_parameterfile
+        basis_parameterfile = args_parsed.basis_parameterfile
         calc_data.set_program_path(prog)
         # Set and check the program path if its executable
         calc_data.set_program_path(prog)

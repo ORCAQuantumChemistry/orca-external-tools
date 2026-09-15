@@ -13,7 +13,7 @@ main: function
 
 import sys
 import warnings
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Namespace
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -670,14 +670,10 @@ class Aimnet2Calc(BaseCalc):
         args, _ = parser.parse_known_args(input_args)
 
         # Get the calculator specific parameters
-        args_parsed = vars(args)
-        download_only = args_parsed.get("download_only")
-        model = args_parsed.get("model")
-        model_dir = args_parsed.get("model_dir")
-
-        # Do some type checking
-        if not isinstance(model_dir, str) or not isinstance(model, str):
-            raise TypeError("Problems handling input parameters.")
+        args_parsed = args
+        download_only = args_parsed.download_only
+        model = args_parsed.model
+        model_dir = args_parsed.model_dir
 
         # Handle download only.
         if download_only:
@@ -830,7 +826,7 @@ class Aimnet2Calc(BaseCalc):
     def calc(
         self,
         calc_data: CalculationData,
-        args_parsed: dict[str, Any],
+        args_parsed: Namespace,
         args_not_parsed: list[str],
     ) -> tuple[float, list[float]]:
         """Routine for calculating energy + optional gradient.
@@ -838,39 +834,18 @@ class Aimnet2Calc(BaseCalc):
         Validates cross-flag constraints, then sets up the calculator and
         runs run_aimnet2.
         """
-        model = args_parsed.get("model")
-        model_dir = args_parsed.get("model_dir")
-        coulomb_cutoff = args_parsed.get("coulomb_cutoff")
-        device = str(args_parsed.get("device"))
-        coulomb_method = args_parsed.get("coulomb_method")
-        compile_model = args_parsed.get("compile")
-        nb_threshold = args_parsed.get("nb_threshold")
-        ensemble_member = args_parsed.get("ensemble_member")
-        coulomb = args_parsed.get("coulomb")
-        dispersion = args_parsed.get("dispersion")
-        dftd3_cutoff = args_parsed.get("dftd3_cutoff")
-        dftd3_smoothing_fraction = args_parsed.get("dftd3_smoothing_fraction")
-
-        # Do some type checking
-        if (
-            not isinstance(model_dir, str)
-            or not isinstance(model, str)
-            or not isinstance(device, str)
-            or not isinstance(compile_model, bool)
-            or coulomb_method is not None
-            and not isinstance(coulomb_method, str)
-            or not isinstance(ensemble_member, int)
-            or not isinstance(coulomb, str)
-            or not isinstance(dispersion, str)
-            or not isinstance(coulomb_cutoff, float)
-            or (dftd3_cutoff is not None and not isinstance(dftd3_cutoff, float))
-            or (
-                dftd3_smoothing_fraction is not None
-                and not isinstance(dftd3_smoothing_fraction, float)
-            )
-            or not isinstance(nb_threshold, int)
-        ):
-            raise TypeError("Problems handling input parameters.")
+        model = args_parsed.model
+        model_dir = args_parsed.model_dir
+        coulomb_cutoff = args_parsed.coulomb_cutoff
+        device = str(args_parsed.device)
+        coulomb_method = args_parsed.coulomb_method
+        compile_model = args_parsed.compile
+        nb_threshold = args_parsed.nb_threshold
+        ensemble_member = args_parsed.ensemble_member
+        coulomb = args_parsed.coulomb
+        dispersion = args_parsed.dispersion
+        dftd3_cutoff = args_parsed.dftd3_cutoff
+        dftd3_smoothing_fraction = args_parsed.dftd3_smoothing_fraction
 
         # --- cross-flag validation ----------------------------------------
         # --coulomb-cutoff is only meaningful with --coulomb-method.

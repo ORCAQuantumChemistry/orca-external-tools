@@ -43,7 +43,7 @@ if resolved_aimnet2_script is None:
 aimnet2_script_path = Path(resolved_aimnet2_script)
 
 # Default ID and port of server. Change if needed
-id_port = "127.0.0.1:9000"
+ip_port = "127.0.0.1:9000"
 
 # Model for running the tests
 aimnet_model = "aimnet2"
@@ -76,7 +76,7 @@ def run_aimnet2(inputfile: str, output_file: str) -> None:
         inputfile=inputfile,
         script_path=aimnet2_client_path,
         outfile=output_file,
-        args=["--bind", id_port],
+        args=["--bind", ip_port],
         timeout=30,
     )
 
@@ -110,7 +110,7 @@ class Aimnet2Tests(unittest.TestCase):
                     aimnet2_server_path,
                     "aimnet2",
                     "--bind",
-                    id_port,
+                    ip_port,
                     "--nthreads",
                     "2",
                 ],
@@ -121,7 +121,7 @@ class Aimnet2Tests(unittest.TestCase):
         # Wait for the server to be ready.
         wait_for_server(
             process=cls.server,
-            ip_port=id_port,
+            ip_port=ip_port,
             timeout=30.0,
         )
 

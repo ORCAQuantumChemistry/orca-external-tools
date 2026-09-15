@@ -5,8 +5,7 @@ MACE wrapper for ORCA's ExtTool interface.
 
 import sys
 import warnings
-from argparse import ArgumentParser
-from typing import Any
+from argparse import ArgumentParser, Namespace
 
 from oet.core.base_calc import BaseCalc, CalculationData
 from oet.core.misc import ENERGY_CONVERSION, LENGTH_CONVERSION, xyzfile_to_at_coord
@@ -132,6 +131,7 @@ class MaceCalc(BaseCalc):
         parser.add_argument(
             "-s",
             "--suite",
+            dest="suite",
             choices=["mp", "omol", "mace-mp", "mace-omol"],
             default="omol",
             help="Select MACE suite: mp/mace-mp or omol/mace-omol. Default: omol",
@@ -254,7 +254,7 @@ class MaceCalc(BaseCalc):
     def calc(
         self,
         calc_data: CalculationData,
-        args_parsed: dict[str, Any],
+        args_parsed: Namespace,
         args_not_parsed: list[str],
     ) -> tuple[float, list[float]]:
         """
@@ -264,7 +264,7 @@ class MaceCalc(BaseCalc):
         ----------
         calc_data: CalculationData
             Object with calculation data for the run
-        args_parsed: dict[str, Any]
+        args_parsed: Namespace
             Arguments parsed as defined in extend_parser
         args_not_parsed: list[str]
             Arguments not parsed so far
@@ -277,12 +277,12 @@ class MaceCalc(BaseCalc):
             Flattened gradient vector (Eh/Bohr), if computed, otherwise empty
         """
 
-        suite = args_parsed["suite"]
+        suite = args_parsed.suite
         if suite.startswith("mace"):
             suite = suite.split("-", 1)[1]
-        dispersion = bool(args_parsed["dispersion"])
-        dispersion_xc = args_parsed["dispersion_xc"]
-        dispersion_cutoff = args_parsed["dispersion_cutoff"]
+        dispersion = args_parsed.dispersion
+        dispersion_xc = args_parsed.dispersion_xc
+        dispersion_cutoff = args_parsed.dispersion_cutoff
         if dispersion and suite != "mp":
             print(
                 "WARNING: Dispersion flag recognized, but MP suite not used. Ignoring all options related to dispersion."
@@ -298,14 +298,14 @@ class MaceCalc(BaseCalc):
             )
             self.set_calculator(
                 suite=suite,
-                model=args_parsed["model"],
+                model=args_parsed.model,
                 dispersion=dispersion,
-                damping=args_parsed["damping"],
+                damping=args_parsed.damping,
                 dispersion_xc=dispersion_xc,
                 dispersion_cutoff=dispersion_cutoff,
-                device=args_parsed["device"],
-                default_dtype=args_parsed["default_dtype"],
-                head=args_parsed["head"],
+                device=args_parsed.device,
+                default_dtype=args_parsed.default_dtype,
+                head=args_parsed.head,
             )
 
         # process the XYZ file

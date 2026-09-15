@@ -3,7 +3,6 @@ import subprocess
 import unittest
 from pathlib import Path
 
-from oet.calculator.aimnet2 import DEFAULT_MODEL_PATH
 from oet.core.test_utilities import (
     OH,
     WATER,
