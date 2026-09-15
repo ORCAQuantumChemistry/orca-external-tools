@@ -13,7 +13,7 @@ main: function
 
 import sys
 import warnings
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Namespace
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -203,9 +203,12 @@ class Aimnet2Calc(BaseCalc):
     @staticmethod
     def _aimnet_alias_resolver(name: str) -> str | None:
         """Look up `name` in aimnet's model registry; return canonical
-        name if it is an alias, else None."""
-        canonical = load_model_registry()["aliases"].get(name)
-        return canonical if canonical is None else str(canonical)
+        file name if it is an alias, else None."""
+        registry = load_model_registry()
+        aliases = registry["aliases"]
+        canonical = aliases.get(name) or name
+        file = registry["models"].get(canonical, {}).get("file")
+        return str(file) if file else None
 
     @staticmethod
     def _aimnet_subdir_fallback(name: str, exc: Exception) -> str | None:
@@ -636,6 +639,51 @@ class Aimnet2Calc(BaseCalc):
             help="Override D3 cutoff smoothing fraction. Default: model's value.",
         )
 
+        # --- Special options ----------------------------------------------
+        parser.add_argument(
+            "-do",
+            "--download-only",
+            action="store_true",
+            default=False,
+            dest="download_only",
+            help="Only download the model files without performing an actual calculation. "
+            "Respects the model and cache dir defined via command line. ",
+        )
+
+    def handle_special_args(self, input_args: list[str] | None = None) -> bool:
+        """
+        Handle special arguments that don't require an input file.
+
+        Parameters
+        ----------
+        input_args: list [str]
+            The input arguments.
+
+        Returns
+        -------
+        bool
+            Whether special arguments were handled and the script can exit or not.
+        """
+        # Create an argument parser.
+        parser = ArgumentParser(add_help=False)
+        self.extend_parser(parser=parser)
+        args, _ = parser.parse_known_args(input_args)
+
+        # Get the calculator specific parameters
+        args_parsed = args
+        download_only = args_parsed.download_only
+        model = args_parsed.model
+        model_dir = args_parsed.model_dir
+
+        # Handle download only.
+        if download_only:
+            print(f"Downloading model files if necessary to {model_dir}.")
+            self.get_model_file(model=model, model_dir=str(model_dir))
+            print("Done")
+            return True
+
+        return False
+
     def atomic_symbol_to_number(self, symbol: str) -> int:
         """Convert an element symbol to atomic number.
 
@@ -778,7 +826,7 @@ class Aimnet2Calc(BaseCalc):
     def calc(
         self,
         calc_data: CalculationData,
-        args_parsed: dict[str, Any],
+        args_parsed: Namespace,
         args_not_parsed: list[str],
     ) -> tuple[float, list[float]]:
         """Routine for calculating energy + optional gradient.
@@ -786,6 +834,19 @@ class Aimnet2Calc(BaseCalc):
         Validates cross-flag constraints, then sets up the calculator and
         runs run_aimnet2.
         """
+        model = args_parsed.model
+        model_dir = args_parsed.model_dir
+        coulomb_cutoff = args_parsed.coulomb_cutoff
+        device = str(args_parsed.device)
+        coulomb_method = args_parsed.coulomb_method
+        compile_model = args_parsed.compile
+        nb_threshold = args_parsed.nb_threshold
+        ensemble_member = args_parsed.ensemble_member
+        coulomb = args_parsed.coulomb
+        dispersion = args_parsed.dispersion
+        dftd3_cutoff = args_parsed.dftd3_cutoff
+        dftd3_smoothing_fraction = args_parsed.dftd3_smoothing_fraction
+
         # --- cross-flag validation ----------------------------------------
         # --coulomb-cutoff is only meaningful with --coulomb-method.
         # The 15.0 != check has one corner: a user who passes --coulomb-cutoff 15.0
@@ -798,16 +859,12 @@ class Aimnet2Calc(BaseCalc):
         # stashing the parser in args_parsed used to poison server.py's cache
         # key (frozenset of args_parsed.items()) because ArgumentParser is
         # hashed by identity. SystemExit's message goes to stderr automatically.
-        user_set_cutoff = args_parsed.get("coulomb_cutoff", 15.0) != 15.0
-        if user_set_cutoff and args_parsed.get("coulomb_method") is None:
+        if coulomb_cutoff != 15.0 and coulomb_method is None:
             raise SystemExit("oet_aimnet2: error: --coulomb-cutoff requires --coulomb-method")
 
-        # --- read parsed args (defaults match extend_parser) -------------
-        model = args_parsed.get("model", "aimnet2")
         # Mirror the argparse default so mypy sees a guaranteed-str (the
         # parser sets default=str(DEFAULT_MODEL_PATH)).
-        model_dir = args_parsed.get("model_dir", str(DEFAULT_MODEL_PATH))
-        device = str(args_parsed.get("device", "cpu"))
+        device = str(args_parsed.get("device"))
         if device not in self._SUPPORTED_DEVICES:
             raise RuntimeError(
                 f"Device {device} not supported. Use one of {self._SUPPORTED_DEVICES}."
@@ -819,15 +876,15 @@ class Aimnet2Calc(BaseCalc):
             model_dir=model_dir,
             device=device,
             ncores=calc_data.ncores,
-            compile_model=args_parsed.get("compile", False),
-            nb_threshold=args_parsed.get("nb_threshold", 120),
-            ensemble_member=args_parsed.get("ensemble_member", 0),
-            coulomb=args_parsed.get("coulomb", "auto"),
-            dispersion=args_parsed.get("dispersion", "auto"),
-            coulomb_method=args_parsed.get("coulomb_method"),
-            coulomb_cutoff=args_parsed.get("coulomb_cutoff", 15.0),
-            dftd3_cutoff=args_parsed.get("dftd3_cutoff"),
-            dftd3_smoothing_fraction=args_parsed.get("dftd3_smoothing_fraction"),
+            compile_model=compile_model,
+            nb_threshold=nb_threshold,
+            ensemble_member=ensemble_member,
+            coulomb=coulomb,
+            dispersion=dispersion,
+            coulomb_method=coulomb_method,
+            coulomb_cutoff=coulomb_cutoff,
+            dftd3_cutoff=dftd3_cutoff,
+            dftd3_smoothing_fraction=dftd3_smoothing_fraction,
         )
 
         # --- read XYZ and run --------------------------------------------
@@ -842,6 +899,8 @@ class Aimnet2Calc(BaseCalc):
 def main(argv: list[str] | None = None) -> None:
     """Main routine for execution."""
     calculator = Aimnet2Calc()
+    if calculator.handle_special_args(argv):
+        return
     inputfile, args, args_not_parsed = calculator.parse_args(argv)
     calculator.run(inputfile=inputfile, args_parsed=args, args_not_parsed=args_not_parsed)
 

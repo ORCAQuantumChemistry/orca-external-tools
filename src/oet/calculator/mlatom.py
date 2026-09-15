@@ -36,9 +36,8 @@ import os
 import shutil
 import sys
 import tempfile
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Namespace
 from pathlib import Path
-from typing import Any
 
 from oet.core.base_calc import BaseCalc, CalculationData
 from oet.core.misc import LENGTH_CONVERSION, check_path, run_command
@@ -167,7 +166,7 @@ class MlatomCalc(BaseCalc):
     def calc(
         self,
         calc_data: CalculationData,
-        args_parsed: dict[str, Any],
+        args_parsed: Namespace,
         args_not_parsed: list[str],
     ) -> tuple[float, list[float]]:
         """
@@ -178,7 +177,7 @@ class MlatomCalc(BaseCalc):
         ----------
         calc_data: CalculationData
             Calculation data
-        args_parsed: dict[str, Any]
+        args_parsed: Namespace
             Arguments parsed as defined in extend_parser
         args_not_parsed: list[str]
             Arguments not parsed so far
@@ -191,7 +190,7 @@ class MlatomCalc(BaseCalc):
             Flattened gradient vector (Eh/Bohr), if computed, otherwise empty.
         """
         # Get options that were parsed
-        prog = args_parsed.get("prog")
+        prog = args_parsed.prog
 
         calc_data.set_program_path(prog)
         if calc_data.prog_path:

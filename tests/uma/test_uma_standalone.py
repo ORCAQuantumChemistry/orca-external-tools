@@ -1,13 +1,11 @@
 import shutil
+import subprocess
 import unittest
 from pathlib import Path
 
-from oet.calculator.uma import DEFAULT_CACHE_DIR, UmaCalc
 from oet.core.test_utilities import (
     OH,
     WATER,
-    TimeoutCall,
-    TimeoutCallError,
     get_filenames,
     read_result_file,
     run_wrapper,
@@ -30,9 +28,7 @@ timeout = 600
 uma_model = "uma-s-1p1"
 
 
-def cache_model_files(
-    basemodel: str, param: str = "omol", device: str = "cpu", cache_dir: str = DEFAULT_CACHE_DIR
-) -> None:
+def cache_model_files(basemodel: str, param: str = "omol") -> None:
     """
     Wrapper to set up an UMA calculator that downloads the model files into the same cache-directory used for actual oet calculations.
 
@@ -40,18 +36,24 @@ def cache_model_files(
         Basemodel used to calculate the test cases
     param: str, default: omol
         Parameter set.
-    device str, default: cpu
-        Device used for the calculations.
-    cache_dir: str, default: DEFAULT_CACHE_DIR
-        The cache directory used to store the model data.
     """
-    calculator = UmaCalc()
-    calculator.set_calculator(param=param, basemodel=basemodel, device=device, cache_dir=cache_dir)
+    subprocess.run(
+        [
+            uma_script_path,
+            "--download-only",
+            "--model",
+            basemodel,
+            "--task",
+            param,
+        ],
+        check=True,
+        timeout=timeout,
+    )
 
 
 def run_uma(inputfile: str, output_file: str) -> None:
     # Run the wrapper with an increased timeout as loading the UMA model files might take a while
-    run_wrapper(inputfile=inputfile, script_path=uma_script_path, outfile=output_file, timeout=30)
+    run_wrapper(inputfile=inputfile, script_path=uma_script_path, outfile=output_file, timeout=60)
 
 
 class UmaTests(unittest.TestCase):
@@ -62,29 +64,14 @@ class UmaTests(unittest.TestCase):
         """
         # Pre-download UMA model files
         print("Checking the model files and downloading them if necessary.")
-        # Make a timeout call to avoid hanging forever
-        get_pretrained_mlip_timeout = TimeoutCall(fn=cache_model_files)
-        ok, payload = get_pretrained_mlip_timeout(uma_model, timeout=timeout)
-        # Check if the model files could not be loaded
-        if not ok:
-            # Timeout
-            if payload == TimeoutCallError.TIMEOUT:
-                print(
-                    "Loading the model files timed out. "
-                    "Please check your internet connection and consider increasing the time before timing out."
-                )
-                raise unittest.SkipTest("Timed out.")
-            # General errors and crashes
-            elif payload == TimeoutCallError.CRASH or payload == TimeoutCallError.ERROR:
-                print(
-                    "Loading the model files failed. Make sure that "
-                    "the virtual environment with UMA installed is active."
-                )
-                raise unittest.SkipTest("Loading failed.")
-            # Unresolved error
-            else:
-                print("Could not load the model files.")
-                raise unittest.SkipTest("Loading failed.")
+        try:
+            cache_model_files(uma_model)
+        except subprocess.TimeoutExpired:
+            raise unittest.SkipTest(
+                "Loading the model files timed out. Please check your internet connection."
+            )
+        except subprocess.CalledProcessError:
+            raise unittest.SkipTest("Loading the model files failed. ")
 
     def test_H2O_engrad(self):
         xyz_file, input_file, engrad_out, output_file = get_filenames("H2O")

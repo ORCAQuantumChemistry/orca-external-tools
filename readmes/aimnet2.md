@@ -109,6 +109,12 @@ in a sibling PR.)
 | `--dftd3-cutoff R` | unset | Override D3 cutoff in Å. |
 | `--dftd3-smoothing-fraction f` | unset | Override D3 smoothing fraction. |
 
+## Special flags
+
+| Flag | Default | Effect |
+|------|---------|--------|
+| `--download-only` | unset | Only download model files and exit. |
+
 ## Examples
 
 CLI smoke (default model, water gradient):

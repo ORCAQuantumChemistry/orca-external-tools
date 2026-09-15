@@ -15,9 +15,8 @@ main: function
 import os
 import sys
 import warnings
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Namespace
 from pathlib import Path
-from typing import Any
 
 from oet import ASSETS_DIR
 from oet.core.base_calc import BaseCalc, CalculationData
@@ -206,13 +205,61 @@ class UmaCalc(BaseCalc):
             f'Default: "{DEFAULT_CACHE_DIR}".',
         )
         parser.add_argument(
+            "-do",
+            "--download-only",
+            action="store_true",
+            default=False,
+            dest="download_only",
+            help="Only download the model files without performing an actual calculation. "
+            "Respects the model and cache dir defined via command line. ",
+        )
+        parser.add_argument(
             "-o",
             "--offline",
-            type=bool,
+            action="store_true",
             default=False,
             dest="offline_mode",
             help="Force into offline mode. Please note that there will be an error if the model parameters are not found.",
         )
+
+    def handle_special_args(self, input_args: list[str] | None = None) -> bool:
+        """
+        Handle special arguments that don't require an input file.
+
+        Parameters
+        ----------
+        input_args: list [str]
+            The input arguments.
+
+        Returns
+        -------
+        bool
+            Whether special arguments were handled and the script can exit or not.
+        """
+        # Create an argument parser and parse.
+        parser = ArgumentParser(add_help=False)
+        self.extend_parser(parser=parser)
+        args_parsed, _ = parser.parse_known_args(input_args)
+
+        # Check if the model files should only be downloaded.
+        download_only = args_parsed.download_only
+
+        # Handle download only.
+        if download_only:
+            # Get the calculator specific parameters
+            param = args_parsed.param
+            basemodel = args_parsed.basemodel
+            device = args_parsed.device
+            cache_dir = args_parsed.cache_dir
+            # Download the files if necessary.
+            print(f"Downloading model files if necessary to {DEFAULT_CACHE_DIR}.")
+            self.set_calculator(
+                param=param, basemodel=basemodel, device=device, cache_dir=cache_dir
+            )
+            print("Done")
+            return True
+
+        return False
 
     def run_uma(
         self,
@@ -267,7 +314,7 @@ class UmaCalc(BaseCalc):
     def calc(
         self,
         calc_data: CalculationData,
-        args_parsed: dict[str, Any],
+        args_parsed: Namespace,
         args_not_parsed: list[str],
     ) -> tuple[float, list[float]]:
         """
@@ -292,18 +339,11 @@ class UmaCalc(BaseCalc):
             Flattened gradient vector (Eh/Bohr), if computed, otherwise empty
         """
         # Get the arguments parsed as defined in extend_parser
-        param = args_parsed.get("param")
-        basemodel = args_parsed.get("basemodel")
-        device = args_parsed.get("device")
-        cache_dir = args_parsed.get("cache_dir")
-        offline_mode = args_parsed.get("offline_mode")
-        if (
-            not isinstance(param, str)
-            or not isinstance(basemodel, str)
-            or not isinstance(device, str)
-            or not isinstance(cache_dir, str)
-        ):
-            raise TypeError("Problems handling input parameters.")
+        param = args_parsed.param
+        basemodel = args_parsed.basemodel
+        device = args_parsed.device
+        cache_dir = args_parsed.cache_dir
+        offline_mode = args_parsed.offline_mode
         # Check if the model files are available
         model_files_available = self.check_for_model_files(basemodel=basemodel, cache_dir=cache_dir)
         # If they are available, switch to offline mode.
@@ -342,6 +382,8 @@ def main() -> None:
     Main routine for execution
     """
     calculator = UmaCalc()
+    if calculator.handle_special_args():
+        return
     inputfile, args, args_not_parsed = calculator.parse_args()
     calculator.run(inputfile=inputfile, args_parsed=args, args_not_parsed=args_not_parsed)
 

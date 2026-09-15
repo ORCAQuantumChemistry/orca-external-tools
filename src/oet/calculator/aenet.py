@@ -11,10 +11,9 @@ main: function
     Main function
 """
 
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Namespace
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Any
 
 from oet.core.base_calc import BaseCalc, CalculationData
 from oet.core.misc import (
@@ -171,7 +170,7 @@ class AenetCalc(BaseCalc):
     def calc(
         self,
         calc_data: CalculationData,
-        args_parsed: dict[str, Any],
+        args_parsed: Namespace,
         args_not_parsed: list[str],
     ) -> tuple[float, list[float]]:
         """
@@ -182,7 +181,7 @@ class AenetCalc(BaseCalc):
         ----------
         calc_data: CalculationData
             Object with calculation data for the run
-        args_parsed: dict[str, Any]
+        args_parsed: Namespace
             Arguments parsed as defined in extend_parser
         args_not_parsed: list[str]
             Arguments not parsed so far
@@ -195,9 +194,9 @@ class AenetCalc(BaseCalc):
             Flattened gradient vector (Eh/Bohr), if computed, otherwise empty
         """
         # Get the arguments parsed as defined in extend_parser
-        prog = args_parsed.get("prog")
-        nnpath_name = args_parsed.get("nnpath")
-        nnext = args_parsed.get("nnext")
+        prog = args_parsed.prog
+        nnpath_name = args_parsed.nnpath
+        nnext = args_parsed.nnext
 
         # Set and check program path
         calc_data.set_program_path(prog)

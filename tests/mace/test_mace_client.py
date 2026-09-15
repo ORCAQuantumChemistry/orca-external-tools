@@ -12,6 +12,7 @@ from oet.core.test_utilities import (
     get_filenames,
     read_result_file,
     run_wrapper,
+    wait_for_server,
     write_input_file,
     write_xyz_file,
 )
@@ -36,12 +37,12 @@ mace_server_path = Path(resolved_server_script)
 # Default maximum time (in sec) to download the model files if not present
 timeout = 600
 # Default ID and port of server. Change if needed
-id_port = "127.0.0.1:9000"
+ip_port = "127.0.0.1:9000"
 
 
 def run_mace(inputfile: str, output_file: str, args: list[str]) -> None:
     # Run the wrapper with an increased timeout as loading the MACE model files might take a while
-    args.extend(["--bind", id_port])
+    args.extend(["--bind", ip_port])
     run_wrapper(
         inputfile=inputfile,
         script_path=mace_script_path,
@@ -57,16 +58,21 @@ class MACETests(unittest.TestCase):
         """
         Test starting the server
         """
-        print("Starting the server. A detailed server log can be found on file server.out")
-        with open("server.out", "a") as f:
+        server_out = Path("server.out").resolve()
+        print(f"Starting the server. A detailed server log can be found on file {server_out}")
+        with open(server_out, "a") as f:
             cls.server = subprocess.Popen(
-                [mace_server_path, "mace", "--bind", id_port, "--nthreads", "2"],
+                [mace_server_path, "mace", "--bind", ip_port, "--nthreads", "2"],
                 stdout=f,
                 stderr=subprocess.STDOUT,
                 start_new_session=True,
             )
-        # Wait a little to make sure it is setup
-        time.sleep(5)
+        # Wait for the server to be ready.
+        wait_for_server(
+            process=cls.server,
+            ip_port=ip_port,
+            timeout=30.0,
+        )
 
     @classmethod
     def tearDownClass(cls):

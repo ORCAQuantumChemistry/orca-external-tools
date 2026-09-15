@@ -15,9 +15,8 @@ main: function
 """
 
 import sys
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Namespace
 from pathlib import Path
-from typing import Any
 
 from oet.core.base_calc import BaseCalc, CalculationData
 from oet.core.misc import (
@@ -282,7 +281,7 @@ class MopacCalc(BaseCalc):
         run_command(calc_data.prog_path, out_path, args)
 
     def calc(
-        self, calc_data: CalculationData, args_parsed: dict[str, Any], args_not_parsed: list[str]
+        self, calc_data: CalculationData, args_parsed: Namespace, args_not_parsed: list[str]
     ) -> tuple[float, list[float]]:
         """
         Routine for calculating energy and optional gradient.
@@ -292,7 +291,7 @@ class MopacCalc(BaseCalc):
         ----------
         calc_data: CalculationData
             Object with calculation data for the run
-        args_parsed: dict[str, Any]
+        args_parsed: Namespace
             Arguments parsed as defined in extend_parser
         args_not_parsed: list[str]
             Arguments not parsed so far
@@ -305,10 +304,8 @@ class MopacCalc(BaseCalc):
             Flattened gradient vector (Eh/Bohr), if computed, otherwise empty
         """
         # Get options that were parsed
-        prog = args_parsed.get("prog")
-        method = args_parsed.get("method")
-        if not isinstance(method, str):
-            raise TypeError("Problems detecting method.")
+        prog = args_parsed.prog
+        method = args_parsed.method
         # Set and check the program path if its executable
         calc_data.set_program_path(prog)
         if calc_data.prog_path:

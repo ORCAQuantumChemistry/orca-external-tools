@@ -3,7 +3,9 @@ Utilities used in the test suite
 """
 
 import multiprocessing as mp
+import socket
 import subprocess
+import time
 from collections.abc import Callable
 from enum import StrEnum
 from pathlib import Path
@@ -60,7 +62,7 @@ def read_result_file(filename: str | Path) -> tuple[int, float, list[float]]:
 
 def write_input_file(
     filename: str | Path,
-    xyz_filename: str,
+    xyz_filename: Path,
     charge: int,
     multiplicity: int,
     ncores: int,
@@ -89,7 +91,7 @@ def write_input_file(
     """
 
     # Validate inputs (basic checks)
-    if not xyz_filename.endswith(".xyz"):
+    if xyz_filename.suffix != ".xyz":
         raise ValueError("xyz_filename did not end with '.xyz'")
     if multiplicity <= 0:
         raise ValueError("multiplicity must be a positive integer")
@@ -182,14 +184,14 @@ def add_arguments(args: str | list[str], additions: list[str]) -> list[str]:
     return args
 
 
-def get_filenames(basename: str) -> tuple[str, str, str, str]:
+def get_filenames(basename: str) -> tuple[Path, Path, Path, Path]:
     """
     Set the filenames according to how ORCA would do and cleans any input existing
     """
-    xyz_file = basename + ".xyz"
-    input_file = basename + ".extinp.tmp"
-    engrad_out = basename + ".engrad"
-    output_file = basename + ".out"
+    xyz_file = Path(basename + ".xyz")
+    input_file = Path(basename + ".extinp.tmp")
+    engrad_out = Path(basename + ".engrad")
+    output_file = Path(basename + ".out").resolve()
     clear_files(basename=basename)
     return xyz_file, input_file, engrad_out, output_file
 
@@ -228,6 +230,54 @@ def _worker(
         q.put(True)
     except Exception:
         q.put(False)
+
+
+def wait_for_server(
+    process: subprocess.Popen[str],
+    ip_port: str,
+    timeout: float = 60.0,
+    poll_interval: float = 0.1,
+) -> None:
+    """
+    Wait until a server process accepts TCP connections.
+
+    Parameters
+    ----------
+    process: subprocess.Popen[str]
+        The subprocess used for starting the server.
+    id_port: str
+        The server address.
+    timeout: float, default: 60.0
+        The allowed time for waiting.
+    poll_interval: float, default: 0.1
+        The interval for pinging the server.
+    """
+
+    # Get the server address
+    host, port_str = ip_port.rsplit(":", 1)
+    port = int(port_str)
+
+    # Track the time
+    start_time = time.monotonic()
+    while time.monotonic() - start_time < timeout:
+        # Fail early if the server process already died.
+        returncode = process.poll()
+        if returncode is not None:
+            raise RuntimeError(f"Server terminated unexpectedly with return code {returncode}.")
+
+        # Try pinging the server
+        try:
+            with socket.create_connection(
+                (host, port),
+                timeout=poll_interval,
+            ):
+                return
+        except OSError:
+            pass
+
+        time.sleep(poll_interval)
+
+    raise TimeoutError(f"Server did not become ready within {timeout:.0f} s.")
 
 
 class TimeoutCallError(StrEnum):

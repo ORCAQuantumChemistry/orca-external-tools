@@ -161,7 +161,7 @@ def _run_calc_in_process(
 
     # Make run_kwargs with only method-specific settings
     # It is assumed that all not parsed arguments are also method specific
-    args_parsed_frozen = tuple(sorted(run_kwargs["args_parsed"].items()))
+    args_parsed_frozen = tuple(sorted(vars(run_kwargs["args_parsed"]).items()))
     args_not_parsed_frozen = tuple(run_kwargs["args_not_parsed"])
     method_specific_args = {
         "args_parsed": args_parsed_frozen,
@@ -377,7 +377,7 @@ class OtoolServer:
         finally:
             self.core_limiter.release(ncores_job)
 
-    def parse_client_input(self, arguments: Sequence[str]) -> tuple[str, dict[str, Any], list[str]]:
+    def parse_client_input(self, arguments: Sequence[str]) -> tuple[str, Namespace, list[str]]:
         """
         Handles the input sent by client
 
@@ -390,7 +390,7 @@ class OtoolServer:
         -------
         str
             inputfile name
-        dict
+        Namespace
             parsed settings
         list[str]
             not parsed settings
@@ -407,12 +407,10 @@ class OtoolServer:
 
         args, remaining_args = parser.parse_known_args(arguments)
 
-        # Transform to dict
-        args_dict = vars(args)
-        inputfile = args_dict.pop("inputfile")
+        inputfile = args.inputfile
+        delattr(args, "inputfile")
 
-        return inputfile, args_dict, remaining_args
-
+        return inputfile, args, remaining_args
 
 def create_app(server: OtoolServer) -> Flask:
     """

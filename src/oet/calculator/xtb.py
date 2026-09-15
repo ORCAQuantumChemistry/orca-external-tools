@@ -12,8 +12,7 @@ main: function
 """
 
 import sys
-from argparse import ArgumentParser
-from typing import Any
+from argparse import ArgumentParser, Namespace
 
 from oet.core.base_calc import BaseCalc, CalculationData
 from oet.core.misc import (
@@ -139,7 +138,7 @@ class XtbCalc(BaseCalc):
         run_command(calc_data.prog_path, calc_data.output_file, args)
 
     def calc(
-        self, calc_data: CalculationData, args_parsed: dict[str, Any], args_not_parsed: list[str]
+        self, calc_data: CalculationData, args_parsed: Namespace, args_not_parsed: list[str]
     ) -> tuple[float, list[float]]:
         """
         Routine for calculating energy and optional gradient.
@@ -149,7 +148,7 @@ class XtbCalc(BaseCalc):
         ----------
         calc_data: CalculationData
             Object with calculation data for the run
-        args_parsed: dict[str, Any]
+        args_parsed: Namespace
             Arguments parsed as defined in extend_parser
         args_not_parsed: list[str]
             Arguments not parsed so far
@@ -162,7 +161,7 @@ class XtbCalc(BaseCalc):
             Flattened gradient vector (Eh/Bohr), if computed, otherwise empty
         """
         # Get parsed options
-        prog = args_parsed.get("prog")
+        prog = args_parsed.prog
         # Set and check the program path if its executable
         calc_data.set_program_path(prog)
         if calc_data.prog_path:
